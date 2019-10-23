@@ -31,12 +31,12 @@ namespace Moneybox.App.Domain.Services
 
         public void CheckPayLimit(decimal amountPaid, string userEmail)
         {
-            if (amountPaid > Account.PayInLimit)
+            if (amountPaid > AccountLimits.PayIn)
             {
                 throw new InvalidOperationException("Account pay in limit reached");
             }
 
-            if (Account.PayInLimit - amountPaid < 500m)
+            if (AccountLimits.PayIn - amountPaid < 500m)
             {
                 this.notificationService.NotifyApproachingPayInLimit(userEmail);
             }

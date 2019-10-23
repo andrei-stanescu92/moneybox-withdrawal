@@ -4,8 +4,6 @@ namespace Moneybox.App
 {
     public class Account
     {
-        public const decimal PayInLimit = 4000m;
-
         public Guid Id { get; set; }
 
         public User User { get; set; }
