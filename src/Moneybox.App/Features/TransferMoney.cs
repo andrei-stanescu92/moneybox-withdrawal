@@ -6,50 +6,32 @@ namespace Moneybox.App.Features
 {
     public class TransferMoney
     {
-        private IAccountRepository accountRepository;
-        private INotificationService notificationService;
+        private readonly IAccountService accountService;
 
-        public TransferMoney(IAccountRepository accountRepository, INotificationService notificationService)
+        public TransferMoney(IAccountService accountService)
         {
-            this.accountRepository = accountRepository;
-            this.notificationService = notificationService;
+            this.accountService = accountService;
         }
 
         public void Execute(Guid fromAccountId, Guid toAccountId, decimal amount)
         {
-            var from = this.accountRepository.GetAccountById(fromAccountId);
-            var to = this.accountRepository.GetAccountById(toAccountId);
+            var sourceAccount = this.accountService.GetAccountByID(fromAccountId);
+            var destinationAccount = this.accountService.GetAccountByID(toAccountId);
 
-            var fromBalance = from.Balance - amount;
-            if (fromBalance < 0m)
-            {
-                throw new InvalidOperationException("Insufficient funds to make transfer");
-            }
+            var sourceAccountBalance = sourceAccount.Balance - amount;
+            this.accountService.CheckAccountBalance(sourceAccountBalance, sourceAccount.User.Email);
 
-            if (fromBalance < 500m)
-            {
-                this.notificationService.NotifyFundsLow(from.User.Email);
-            }
+            var paidAmount = destinationAccount.PaidIn + amount;
+            this.accountService.CheckPayLimit(paidAmount, destinationAccount.User.Email);
 
-            var paidIn = to.PaidIn + amount;
-            if (paidIn > Account.PayInLimit)
-            {
-                throw new InvalidOperationException("Account pay in limit reached");
-            }
+            sourceAccount.Balance -= amount;
+            sourceAccount.Withdrawn -= amount;
 
-            if (Account.PayInLimit - paidIn < 500m)
-            {
-                this.notificationService.NotifyApproachingPayInLimit(to.User.Email);
-            }
+            destinationAccount.Balance += amount;
+            destinationAccount.PaidIn += amount;
 
-            from.Balance = from.Balance - amount;
-            from.Withdrawn = from.Withdrawn - amount;
-
-            to.Balance = to.Balance + amount;
-            to.PaidIn = to.PaidIn + amount;
-
-            this.accountRepository.Update(from);
-            this.accountRepository.Update(to);
+            this.accountService.Update(sourceAccount);
+            this.accountService.Update(destinationAccount);
         }
     }
 }
